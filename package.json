@@ -1,0 +1,51 @@
+{
+  "name": "@your-org/video-utils",
+  "version": "1.0.0",
+  "description": "In-browser video compression and best-frame thumbnail extraction",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./react": {
+      "types": "./dist/react/index.d.ts",
+      "import": "./dist/react/index.js",
+      "require": "./dist/react/index.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "scripts"
+  ],
+  "scripts": {
+    "build": "rm -rf dist && tsup && tsc",
+    "dev": "tsup --watch",
+    "copy-assets": "node scripts/copy-assets.mjs"
+  },
+  "peerDependencies": {
+    "@ffmpeg/ffmpeg": "^0.12",
+    "@ffmpeg/util": "^0.12",
+    "react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@ffmpeg/core": "^0.12.9",
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
+    "@types/react": "^19.0.0",
+    "react": "^19.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "~6.0.0"
+  }
+}
