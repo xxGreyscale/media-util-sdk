@@ -14,6 +14,16 @@ export type OutputFormat =
 
 export type AudioFormat = "aac" | "mp3" | "opus" | "flac";
 
+/**
+ * Compression profile presets.
+ * Ordered from fastest to slowest/best-visuals.
+ */
+export type VideoCompressionProfile =
+  | "performance"
+  | "balanced"
+  | "quality"
+  | "best-quality";
+
 export interface FormatCodecConfig {
   readonly defaultVideoCodec?: string;
   readonly defaultAudioCodec?: string;
@@ -27,11 +37,13 @@ export interface VideoCompressionOptions {
   outputFileName?: string;
   /** Output formats to generate. Default: ["mp4"]. */
   outputFormats?: OutputFormat[];
+  /** Compression profile preset. Default: "performance". */
+  profile?: VideoCompressionProfile;
   /** Video codec. Default: depends on output format. */
   videoCodec?: string;
-  /** Video encoder preset (ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow). Default: "medium". */
+  /** Video encoder preset (ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow). Default: depends on selected profile. */
   preset?: string;
-  /** CRF (Constant Rate Factor): 0-51, lower = better quality. Default: 35. */
+  /** CRF (Constant Rate Factor): 0-51, lower = better quality. Default: depends on selected profile. */
   crf?: number;
   /** Bitrate for video (e.g., "1500k", "2M"). If set, overrides CRF. */
   videoBitrate?: string;
@@ -41,13 +53,13 @@ export interface VideoCompressionOptions {
   height?: number;
   /** Aspect ratio (e.g., "16:9", "4:3"). */
   aspectRatio?: string;
-  /** Frames per second. Default: 24. */
+  /** Frames per second. Default: depends on selected profile. */
   fps?: number;
   /** Audio codec. Default: depends on output format. */
   audioCodec?: string;
-  /** Audio bitrate. Default: "128k". */
+  /** Audio bitrate. Default: depends on selected profile. */
   audioBitrate?: string;
-  /** Number of threads for encoding. Default: 2. */
+  /** Number of threads for encoding. Default: depends on selected profile. */
   threads?: number;
   /** Include faststart flag for faster streaming (MP4 only). Default: true. */
   fastStart?: boolean;

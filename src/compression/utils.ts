@@ -1,4 +1,8 @@
 import type { VideoCompressionOptions, OutputFormat } from "./types";
+import {
+  DEFAULT_COMPRESSION_PROFILE,
+  VIDEO_COMPRESSION_PROFILES,
+} from "./constants";
 
 /**
  * Parses compression arguments from VideoCompressionOptions.
@@ -6,11 +10,18 @@ import type { VideoCompressionOptions, OutputFormat } from "./types";
 export function parseCompressionArgs(
   options: VideoCompressionOptions,
 ): VideoCompressionOptions {
+  const profile = options.profile ?? DEFAULT_COMPRESSION_PROFILE;
+  const profileDefaults = VIDEO_COMPRESSION_PROFILES[profile];
+
   return {
+    ...profileDefaults,
     ...options,
-    fps: options.fps ?? 24,
-    threads: options.threads ?? 2,
-    fastStart: options.fastStart !== false,
+    profile,
+    outputFormats: options.outputFormats ??
+      profileDefaults.outputFormats ?? ["mp4"],
+    fps: options.fps ?? profileDefaults.fps ?? 24,
+    threads: options.threads ?? profileDefaults.threads ?? 2,
+    fastStart: options.fastStart ?? profileDefaults.fastStart ?? true,
   };
 }
 
@@ -20,5 +31,8 @@ export function parseCompressionArgs(
 export function getAvailableFormats(
   options?: VideoCompressionOptions,
 ): OutputFormat[] {
-  return options?.outputFormats ?? ["mp4"];
+  const profile = options?.profile ?? DEFAULT_COMPRESSION_PROFILE;
+  const profileDefaults = VIDEO_COMPRESSION_PROFILES[profile];
+
+  return options?.outputFormats ?? profileDefaults.outputFormats ?? ["mp4"];
 }

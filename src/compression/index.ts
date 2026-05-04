@@ -15,6 +15,10 @@ import { CompressionTask } from "./compression-task";
 import { parseCompressionArgs } from "./utils";
 import { ConcurrencyLimiter } from "./concurrency";
 import { setImageDefaults } from "../image";
+export {
+  VIDEO_COMPRESSION_PROFILES,
+  DEFAULT_COMPRESSION_PROFILE,
+} from "./constants";
 
 const MAX_BATCH_CONCURRENCY = 5;
 
