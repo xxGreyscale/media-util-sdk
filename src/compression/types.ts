@@ -71,8 +71,10 @@ export interface VideoUtilsConfig {
   ffmpegBaseUrl?: string;
   /** Explicit FFmpeg asset URLs. Takes precedence over ffmpegBaseUrl. */
   ffmpegAssetUrls?: FFmpegAssetUrls;
-  /** Default compression options. */
+  /** Default video compression options. */
   compressionDefaults?: VideoCompressionOptions;
+  /** Default image compression options applied to every compressImage call. */
+  imageCompressionDefaults?: import("../image/types").ImageCompressionOptions;
 }
 
 /**

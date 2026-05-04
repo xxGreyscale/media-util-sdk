@@ -1,10 +1,5 @@
-import type { ThumbnailResult } from "./types";
-import {
-  COARSE_COUNT,
-  ANALYSIS_WIDTH,
-  THUMBNAIL_MAX_WIDTH,
-  THUMBNAIL_QUALITY,
-} from "./constants";
+import type { ThumbnailResult, ThumbnailQuality, ThumbnailOptions, ThumbnailConfig } from "./types";
+import { THUMBNAIL_PRESETS, DEFAULT_THUMBNAIL_CONFIG } from "./constants";
 import {
   seekTo,
   canvasToBlob,
@@ -14,32 +9,62 @@ import {
 } from "./video-helpers";
 
 /**
- * Three-pass thumbnail extractor. A coarse scan (32 frames) finds the best
- * region; two successive refinement passes (16 + 8 frames) zoom in on the
- * winner to sub-second precision.
+ * Resolves a `ThumbnailQuality` string or `ThumbnailOptions` object into
+ * a fully-populated `ThumbnailConfig`, applying any field overrides on top
+ * of the selected (or default) preset.
+ */
+function resolveConfig(
+  options?: ThumbnailQuality | ThumbnailOptions,
+): ThumbnailConfig {
+  const preset =
+    typeof options === "string"
+      ? THUMBNAIL_PRESETS[options]
+      : options?.quality
+        ? THUMBNAIL_PRESETS[options.quality]
+        : DEFAULT_THUMBNAIL_CONFIG;
+
+  const overrides = typeof options === "object" ? options.config : undefined;
+  return overrides ? { ...preset, ...overrides } : preset;
+}
+
+/**
+ * Extracts the most representative frame from a video as a JPEG thumbnail.
  *
- * Scoring combines:
- *   - Tenengrad sharpness (Sobel gradient magnitude²), center-weighted 70/30
+ * Uses a three-pass strategy:
+ *   1. **Coarse scan** — evaluates N evenly-spaced frames across the video.
+ *   2. **First refinement** — narrows the search around the best coarse frame.
+ *   3. **Second refinement** — narrows further for sub-second precision.
+ *
+ * Each frame is scored by:
+ *   - Tenengrad sharpness (Sobel gradient magnitude²), center-weighted
  *   - Hard rejection of near-black, blown-out, and flat/transition frames
  *   - Saturation bonus (more colourful = more representative)
- *   - Brightness preference (peak at 0.45 luminance)
+ *   - Brightness preference (peaks at mid-tone luminance)
  *
- * @param file - The video file to extract a thumbnail from
- * @param coarseCount - Number of frames to scan in the coarse pass (default: 32)
- * @returns ThumbnailResult with blob and timestamp
+ * @param file    The video file to extract a thumbnail from.
+ * @param options Quality preset or fine-grained options. Defaults to `"normal"`.
+ * @returns       A JPEG blob and the timestamp (seconds) it was captured at.
  *
- * @throws Error if video metadata cannot be loaded or duration is invalid
+ * @throws Error if video metadata cannot be loaded or duration is invalid.
  *
  * @example
  * ```typescript
- * const result = await extractThumbnail(videoFile);
+ * // Use a preset
+ * const result = await extractThumbnail(file, "best-quality");
  * const url = URL.createObjectURL(result.blob);
+ *
+ * // Preset + overrides
+ * const result = await extractThumbnail(file, {
+ *   quality: "quality",
+ *   config: { thumbnailMaxWidth: 3840 },
+ * });
  * ```
  */
 export async function extractThumbnail(
   file: File,
-  coarseCount = COARSE_COUNT,
+  options?: ThumbnailQuality | ThumbnailOptions,
 ): Promise<ThumbnailResult> {
+  const config = resolveConfig(options);
   const objectUrl = URL.createObjectURL(file);
 
   try {
@@ -68,12 +93,12 @@ export async function extractThumbnail(
       margin,
       usable,
       timestamps: coarseTimestamps,
-    } = generateCoarseTimestamps(duration, coarseCount);
+    } = generateCoarseTimestamps(duration, config);
 
     const aspectRatio = videoWidth / videoHeight;
-    const analysisH = Math.max(1, Math.round(ANALYSIS_WIDTH / aspectRatio));
+    const analysisH = Math.max(1, Math.round(config.analysisWidth / aspectRatio));
     const analysisCanvas = document.createElement("canvas");
-    analysisCanvas.width = ANALYSIS_WIDTH;
+    analysisCanvas.width = config.analysisWidth;
     analysisCanvas.height = analysisH;
     const analysisCtx = analysisCanvas.getContext("2d", {
       willReadFrequently: true,
@@ -84,28 +109,28 @@ export async function extractThumbnail(
       coarseTimestamps,
       video,
       analysisCtx,
-      ANALYSIS_WIDTH,
+      config.analysisWidth,
       analysisH,
+      config,
     );
 
     // Passes 2 & 3 — progressively narrower refinement around the winner
-    const effectiveCoarse = Math.max(1, coarseCount);
     const refinedResult = await performRefinementPasses(
       bestTimestamp,
       bestScore,
       margin,
       usable,
-      effectiveCoarse,
       video,
       analysisCtx,
-      ANALYSIS_WIDTH,
+      config.analysisWidth,
       analysisH,
+      config,
     );
     bestScore = refinedResult.bestScore;
     bestTimestamp = refinedResult.bestTimestamp;
 
     // Capture full-resolution thumbnail at the best timestamp.
-    const outW = Math.min(videoWidth, THUMBNAIL_MAX_WIDTH);
+    const outW = Math.min(videoWidth, config.thumbnailMaxWidth);
     const outH = Math.round(outW / aspectRatio);
     const thumbCanvas = document.createElement("canvas");
     thumbCanvas.width = outW;
@@ -115,7 +140,7 @@ export async function extractThumbnail(
     await seekTo(video, bestTimestamp);
     thumbCtx.drawImage(video, 0, 0, outW, outH);
 
-    const blob = await canvasToBlob(thumbCanvas, THUMBNAIL_QUALITY);
+    const blob = await canvasToBlob(thumbCanvas, config.thumbnailQuality);
     return { blob, timestampSeconds: bestTimestamp };
   } finally {
     URL.revokeObjectURL(objectUrl);
@@ -123,4 +148,9 @@ export async function extractThumbnail(
 }
 
 // Re-export public types
-export type { ThumbnailResult } from "./types";
+export type {
+  ThumbnailResult,
+  ThumbnailQuality,
+  ThumbnailConfig,
+  ThumbnailOptions,
+} from "./types";

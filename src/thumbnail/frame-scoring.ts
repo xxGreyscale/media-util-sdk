@@ -1,13 +1,4 @@
-import {
-  MIN_MEAN_LUM,
-  MAX_MEAN_LUM,
-  MIN_STDDEV,
-  BRIGHTNESS_PEAK,
-  BRIGHTNESS_PENALTY_FACTOR,
-  CENTER_REGION_PERCENT,
-  CENTER_SHARPNESS_WEIGHT,
-  FULL_SHARPNESS_WEIGHT,
-} from "./constants";
+import type { ThumbnailConfig } from "./types";
 
 /**
  * Extracts grayscale and saturation data from image pixels.
@@ -44,6 +35,7 @@ export function scoreFrame(
   sat: Float32Array,
   width: number,
   height: number,
+  config: ThumbnailConfig,
 ): number {
   const n = gray.length;
 
@@ -53,18 +45,18 @@ export function scoreFrame(
   const mean = sum / n;
 
   // Hard-reject: near-black, blown-out, or flat (transition/fade) frames.
-  if (mean < MIN_MEAN_LUM || mean > MAX_MEAN_LUM) return -Infinity;
+  if (mean < config.minMeanLum || mean > config.maxMeanLum) return -Infinity;
 
   let varSum = 0;
   for (let i = 0; i < n; i++) varSum += (gray[i] - mean) ** 2;
   const stdDev = Math.sqrt(varSum / n);
 
-  if (stdDev < MIN_STDDEV) return -Infinity;
+  if (stdDev < config.minStdDev) return -Infinity;
 
-  // Brightness preference: smooth peak at 0.45, penalise extremes.
+  // Brightness preference: smooth peak, penalise extremes.
   const brightnessScore = Math.max(
     0,
-    1 - Math.abs(mean - BRIGHTNESS_PEAK) * BRIGHTNESS_PENALTY_FACTOR,
+    1 - Math.abs(mean - config.brightnessPeak) * config.brightnessPenaltyFactor,
   );
 
   // Mean saturation — colourful frames tend to be more representative.
@@ -73,12 +65,12 @@ export function scoreFrame(
   const meanSat = satSum / n;
 
   // Sharpness: Tenengrad (Sobel gradient magnitude²), split into center and
-  // full-frame regions. Center (inner 60% each axis) is weighted 3× because
+  // full-frame regions. Center (inner 70% each axis) is weighted 4× because
   // that is where the subject usually appears.
-  const cx0 = Math.floor(width * CENTER_REGION_PERCENT);
-  const cx1 = Math.ceil(width * (1 - CENTER_REGION_PERCENT));
-  const cy0 = Math.floor(height * CENTER_REGION_PERCENT);
-  const cy1 = Math.ceil(height * (1 - CENTER_REGION_PERCENT));
+  const cx0 = Math.floor(width * config.centerRegionPercent);
+  const cx1 = Math.ceil(width * (1 - config.centerRegionPercent));
+  const cy0 = Math.floor(height * config.centerRegionPercent);
+  const cy1 = Math.ceil(height * (1 - config.centerRegionPercent));
 
   let tenAll = 0;
   let tenCenter = 0;
@@ -117,10 +109,10 @@ export function scoreFrame(
 
   const sharpAll = cntAll > 0 ? tenAll / cntAll : 0;
   const sharpCenter = cntCenter > 0 ? tenCenter / cntCenter : 0;
-  // 30% full-frame + 70% center gives a good balance between subject and
-  // background sharpness.
+  // Full-frame + center weighted blend; center weight set per preset.
   const sharpness =
-    FULL_SHARPNESS_WEIGHT * sharpAll + CENTER_SHARPNESS_WEIGHT * sharpCenter;
+    config.fullSharpnessWeight * sharpAll +
+    config.centerSharpnessWeight * sharpCenter;
 
   // Sharpness dominates; saturation, contrast, and brightness are tiebreakers.
   return (

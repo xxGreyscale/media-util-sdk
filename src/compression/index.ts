@@ -14,6 +14,7 @@ import {
 import { CompressionTask } from "./compression-task";
 import { parseCompressionArgs } from "./utils";
 import { ConcurrencyLimiter } from "./concurrency";
+import { setImageDefaults } from "../image";
 
 const MAX_BATCH_CONCURRENCY = 5;
 
@@ -32,6 +33,9 @@ export function configureVideoUtils(config: VideoUtilsConfig): void {
   }
   if (config.compressionDefaults) {
     _compressionDefaults = config.compressionDefaults;
+  }
+  if (config.imageCompressionDefaults) {
+    setImageDefaults(config.imageCompressionDefaults);
   }
 }
 

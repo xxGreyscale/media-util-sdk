@@ -1,13 +1,6 @@
 import type { VideoCompressionOptions, OutputFormat } from "./types";
 
 /**
- * Extracts base filename without extension.
- */
-export function getBaseName(filename: string): string {
-  return filename.replace(/\.[^/.]+$/, "");
-}
-
-/**
  * Parses compression arguments from VideoCompressionOptions.
  */
 export function parseCompressionArgs(

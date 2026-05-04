@@ -1,8 +1,4 @@
-import {
-  ANALYSIS_WIDTH,
-  REFINE_COUNTS,
-  VIDEO_MARGIN_PERCENT,
-} from "./constants";
+import type { ThumbnailConfig } from "./types";
 import { extractGrayAndSat, scoreFrame } from "./frame-scoring";
 
 /**
@@ -47,6 +43,7 @@ export async function scoreTimestamps(
   analysisCtx: CanvasRenderingContext2D,
   analysisW: number,
   analysisH: number,
+  config: ThumbnailConfig,
 ): Promise<{ bestScore: number; bestTimestamp: number }> {
   let bestScore = -Infinity;
   let bestTimestamp = timestamps[0];
@@ -56,7 +53,7 @@ export async function scoreTimestamps(
     analysisCtx.drawImage(video, 0, 0, analysisW, analysisH);
     const { data } = analysisCtx.getImageData(0, 0, analysisW, analysisH);
     const { gray, sat } = extractGrayAndSat(data, analysisW * analysisH);
-    const score = scoreFrame(gray, sat, analysisW, analysisH);
+    const score = scoreFrame(gray, sat, analysisW, analysisH, config);
     if (score > bestScore) {
       bestScore = score;
       bestTimestamp = ts;
@@ -71,11 +68,11 @@ export async function scoreTimestamps(
  */
 export function generateCoarseTimestamps(
   duration: number,
-  coarseCount: number,
+  config: ThumbnailConfig,
 ): { margin: number; usable: number; timestamps: number[] } {
-  const margin = duration * VIDEO_MARGIN_PERCENT;
+  const margin = duration * config.videoMarginPercent;
   const usable = duration - margin * 2;
-  const effectiveCoarse = Math.max(1, coarseCount);
+  const effectiveCoarse = Math.max(1, config.coarseCount);
 
   const timestamps = Array.from({ length: effectiveCoarse }, (_, i) =>
     effectiveCoarse === 1
@@ -109,18 +106,19 @@ export async function performRefinementPasses(
   bestScore: number,
   margin: number,
   usable: number,
-  effectiveCoarse: number,
   video: HTMLVideoElement,
   analysisCtx: CanvasRenderingContext2D,
   analysisW: number,
   analysisH: number,
+  config: ThumbnailConfig,
 ): Promise<{ bestScore: number; bestTimestamp: number }> {
   let currentBestTimestamp = bestTimestamp;
   let currentBestScore = bestScore;
 
+  const effectiveCoarse = Math.max(1, config.coarseCount);
   let stepSize = effectiveCoarse > 1 ? usable / (effectiveCoarse - 1) : usable;
 
-  for (const refineCount of REFINE_COUNTS) {
+  for (const refineCount of config.refineCounts) {
     const half = stepSize / 2;
     const start = Math.max(margin, currentBestTimestamp - half);
     const end = Math.min(margin + usable, currentBestTimestamp + half);
@@ -133,6 +131,7 @@ export async function performRefinementPasses(
       analysisCtx,
       analysisW,
       analysisH,
+      config,
     );
 
     if (result.bestScore > currentBestScore) {

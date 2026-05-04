@@ -11,7 +11,12 @@ export type {
 export { compressVideos } from "./compression";
 
 export { extractThumbnail } from "./thumbnail";
-export type { ThumbnailResult } from "./thumbnail/types";
+export type {
+  ThumbnailResult,
+  ThumbnailQuality,
+  ThumbnailConfig,
+  ThumbnailOptions,
+} from "./thumbnail/types";
 
 export { processVideo, processVideos, processVideosTolerant } from "./pipeline";
 export type {
@@ -20,4 +25,26 @@ export type {
   ProcessVideosItem,
   ProcessVideosResultItem,
   ProcessVideosTolerantResultItem,
+} from "./pipeline/types";
+
+export { compressImage, compressImages } from "./image";
+export type {
+  CompressedImageOutput,
+  ImageCompressionOptions,
+  ImageOutputFormat,
+  BatchImageCompressionItem,
+  BatchImageCompressionResult,
+} from "./image/types";
+
+export {
+  processImage,
+  processImages,
+  processImagesTolerant,
+} from "./pipeline";
+export type {
+  ProcessImageOptions,
+  ProcessImageResult,
+  ProcessImagesItem,
+  ProcessImagesResultItem,
+  ProcessImagesTolerantResultItem,
 } from "./pipeline/types";

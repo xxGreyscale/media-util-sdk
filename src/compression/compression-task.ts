@@ -8,7 +8,7 @@ import type {
 import { MIME_TYPES } from "./constants";
 import { ensureFfmpegLoaded, getFFmpegInstance } from "./ffmpeg";
 import { buildFFmpegCommand } from "./ffmpeg-args";
-import { getBaseName } from "./utils";
+import { getBaseName } from "../shared/utils";
 
 /**
  * Encapsulates a single compression task with progress tracking.
