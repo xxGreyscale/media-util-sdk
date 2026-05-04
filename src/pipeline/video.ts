@@ -10,7 +10,8 @@ import type {
 
 /**
  * Processes a video file by compressing it and extracting a best-frame thumbnail,
- * both operations running concurrently.
+ * prioritizing compression throughput by running thumbnail extraction after
+ * compression completes.
  *
  * @param file - The video file to process.
  * @param options - Compression, thumbnail, and progress options.
@@ -33,20 +34,18 @@ export async function processVideo(
   file: File,
   options: ProcessVideoOptions = {},
 ): Promise<ProcessVideoResult> {
-  const [compressed, thumbnail] = await Promise.all([
-    compressVideo(
-      file,
-      options.compressionOptions,
-      options.onCompressionProgress,
-    ),
-    extractThumbnail(file, options.thumbnailOptions),
-  ]);
+  const compressed = await compressVideo(
+    file,
+    options.compressionOptions,
+    options.onCompressionProgress,
+  );
+  const thumbnail = await extractThumbnail(file, options.thumbnailOptions);
 
   return { compressed, thumbnail };
 }
 
 /**
- * Strict batch pipeline: compresses videos and extracts thumbnails concurrently.
+ * Strict batch pipeline: runs compression first, then thumbnail extraction.
  * Throws if any item fails.
  *
  * Compression runs with up to 5 concurrent jobs (default, configurable via
@@ -60,21 +59,18 @@ export async function processVideos(
   items: ProcessVideosItem[],
   maxConcurrency?: number,
 ): Promise<ProcessVideosResultItem[]> {
-  const [compressionResults, thumbnails] = await Promise.all([
-    compressVideos(
-      items.map((item) => ({
-        file: item.file,
-        options: item.compressionOptions,
-        onProgress: item.onCompressionProgress,
-      })),
-      maxConcurrency,
-    ),
-    Promise.all(
-      items.map((item) =>
-        extractThumbnail(item.file, item.thumbnailOptions),
-      ),
-    ),
-  ]);
+  const compressionResults = await compressVideos(
+    items.map((item) => ({
+      file: item.file,
+      options: item.compressionOptions,
+      onProgress: item.onCompressionProgress,
+    })),
+    maxConcurrency,
+  );
+
+  const thumbnails = await Promise.all(
+    items.map((item) => extractThumbnail(item.file, item.thumbnailOptions)),
+  );
 
   return compressionResults.map((result, index) => {
     if (result.error || !result.output) {
@@ -105,34 +101,33 @@ export async function processVideosTolerant(
   items: ProcessVideosItem[],
   maxConcurrency?: number,
 ): Promise<ProcessVideosTolerantResultItem[]> {
-  const [compressionResults, thumbnailResults] = await Promise.all([
-    compressVideos(
-      items.map((item) => ({
-        file: item.file,
-        options: item.compressionOptions,
-        onProgress: item.onCompressionProgress,
-      })),
-      maxConcurrency,
-    ),
-    Promise.all(
-      items.map(async (item) => {
-        try {
-          const thumbnail = await extractThumbnail(
-            item.file,
-            item.thumbnailOptions,
-          );
-          return { thumbnail };
-        } catch (error) {
-          return {
-            thumbnailError:
-              error instanceof Error
-                ? error
-                : new Error("Thumbnail extraction failed"),
-          };
-        }
-      }),
-    ),
-  ]);
+  const compressionResults = await compressVideos(
+    items.map((item) => ({
+      file: item.file,
+      options: item.compressionOptions,
+      onProgress: item.onCompressionProgress,
+    })),
+    maxConcurrency,
+  );
+
+  const thumbnailResults = await Promise.all(
+    items.map(async (item) => {
+      try {
+        const thumbnail = await extractThumbnail(
+          item.file,
+          item.thumbnailOptions,
+        );
+        return { thumbnail };
+      } catch (error) {
+        return {
+          thumbnailError:
+            error instanceof Error
+              ? error
+              : new Error("Thumbnail extraction failed"),
+        };
+      }
+    }),
+  );
 
   return items.map((item, index) => {
     const compression = compressionResults[index];

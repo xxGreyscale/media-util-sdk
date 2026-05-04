@@ -1,7 +1,12 @@
 export { configureVideoUtils, compressVideo } from "./compression";
+export {
+  VIDEO_COMPRESSION_PROFILES,
+  DEFAULT_COMPRESSION_PROFILE,
+} from "./compression";
 export type {
   CompressedOutput,
   VideoCompressionOptions,
+  VideoCompressionProfile,
   VideoUtilsConfig,
   FFmpegAssetUrls,
   OutputFormat,
@@ -36,11 +41,7 @@ export type {
   BatchImageCompressionResult,
 } from "./image/types";
 
-export {
-  processImage,
-  processImages,
-  processImagesTolerant,
-} from "./pipeline";
+export { processImage, processImages, processImagesTolerant } from "./pipeline";
 export type {
   ProcessImageOptions,
   ProcessImageResult,
