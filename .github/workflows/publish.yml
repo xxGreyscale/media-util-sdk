@@ -4,10 +4,10 @@ on:
   push:
     tags:
       - "v*"
-  workflow_dispatch:
 
 jobs:
   publish:
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     environment: npm-publish
     concurrency: npm-publish
@@ -25,8 +25,26 @@ jobs:
 
       - run: npm ci
 
+      - name: Derive version from GitHub tag
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          npm version "$TAG_VERSION" --no-git-tag-version --allow-same-version
+
+      - name: Check if version already exists on npm
+        id: npm_version_check
+        run: |
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          if npm view "${PACKAGE_NAME}@${PACKAGE_VERSION}" version >/dev/null 2>&1; then
+            echo "Version ${PACKAGE_NAME}@${PACKAGE_VERSION} is already published. Skipping publish."
+            echo "already_published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "already_published=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - run: npm run prepublishOnly
 
       - run: npm publish --access public
+        if: steps.npm_version_check.outputs.already_published != 'true'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
