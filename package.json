@@ -1,12 +1,23 @@
 {
-  "name": "@your-org/video-utils",
+  "name": "@mdslabs/media-compression",
   "version": "1.0.0",
   "description": "In-browser video compression and best-frame thumbnail extraction",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xxGreyscale/media-util-sdk.git"
+  },
+  "homepage": "https://github.com/xxGreyscale/media-util-sdk#readme",
+  "bugs": {
+    "url": "https://github.com/xxGreyscale/media-util-sdk/issues"
+  },
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -24,10 +35,22 @@
     "dist",
     "scripts"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
-    "build": "rm -rf dist && tsup && tsc",
+    "clean": "rm -rf dist",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit",
+    "build": "npm run clean && tsup && tsc",
     "dev": "tsup --watch",
-    "copy-assets": "node scripts/copy-assets.mjs"
+    "copy-assets": "node scripts/copy-assets.mjs",
+    "audit:prod": "npm audit --omit=dev",
+    "pack:check": "npm pack --dry-run",
+    "prepublishOnly": "npm run build && npm run audit:prod && npm run pack:check",
+    "protect:main": "bash scripts/apply-branch-protection.sh",
+    "prepare": "husky"
   },
   "peerDependencies": {
     "@ffmpeg/ffmpeg": "^0.12",
@@ -40,10 +63,16 @@
     }
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@ffmpeg/core": "^0.12.9",
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/util": "^0.12.2",
     "@types/react": "^19.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.59.2",
+    "@typescript-eslint/parser": "^8.59.2",
+    "eslint": "^10.3.0",
+    "globals": "^17.6.0",
+    "husky": "^9.1.7",
     "react": "^19.0.0",
     "tsup": "^8.0.0",
     "typescript": "~6.0.0"
